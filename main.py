@@ -1,3 +1,4 @@
+import cv2
 import threading
 import time
 import sys
