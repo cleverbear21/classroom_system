@@ -3,14 +3,15 @@ from utils import video_queue
 import time
 import sys
 
-def analyze_video(camera_index=1):
+def analyze_video(camera_index=0):
     try:
-        cap = cv2.VideoCapture(camera_index)
+        cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         if not cap.isOpened():
             print("Error: Cannot access camera")
             return
 
         engagement_score = 100  # Start with full engagement
+        last_update_time = time.time()
 
         while True:
             ret, frame = cap.read()
@@ -21,7 +22,7 @@ def analyze_video(camera_index=1):
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             # Face detection for posture (simple slumped check via face tilt)
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
             faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
             zone = "center"
@@ -30,8 +31,9 @@ def analyze_video(camera_index=1):
                 # Simple posture: if face is tilted or low, deduct (basic approximation)
                 face_center_y = y + h // 2
                 frame_center_y = frame.shape[0] // 2
-                if face_center_y > frame_center_y + 80:  # Increased threshold for less sensitivity
-                    engagement_score = max(0, engagement_score - 5)  # Reduced deduction
+                if face_center_y > frame_center_y + 50:  # More sensitive threshold
+                    print("Poor posture detected")
+                    engagement_score = max(0, engagement_score - 5)  # Moderate deduction
 
                 # Zone based on face position
                 if x + w // 2 < frame.shape[1] // 3:
@@ -44,7 +46,7 @@ def analyze_video(camera_index=1):
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
             # Eye detection for gaze
-            eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+            eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
             eyes = eye_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
             if len(eyes) >= 2:
@@ -57,17 +59,23 @@ def analyze_video(camera_index=1):
 
                 gaze_deviation = abs((left_eye_center_x + right_eye_center_x) / 2 - frame_center_x)
                 print(f"Gaze deviation: {gaze_deviation:.1f}")
-                if gaze_deviation > 80:  # Increased threshold for less sensitivity
+                if gaze_deviation > 50:  # More sensitive threshold
                     print("Eye looking away")
-                    engagement_score = max(0, engagement_score - 20)  # Reduced deduction
+                    engagement_score = max(0, engagement_score - 10)  # Moderate deduction
                 else:
-                    engagement_score = min(100, engagement_score + 2)  # Smaller addition
+                    engagement_score = min(100, engagement_score + 1)  # Smaller addition
 
                 # Draw circles at eye centers instead of rectangles
                 for (ex, ey, ew, eh) in eyes:
                     eye_center_x = ex + ew // 2
                     eye_center_y = ey + eh // 2
                     cv2.circle(frame, (eye_center_x, eye_center_y), 10, (0, 255, 0), 2)
+
+            # Gradual score decay over time
+            current_time = time.time()
+            if current_time - last_update_time > 0.4:  # Every 0.4 seconds
+                engagement_score = max(0, engagement_score - 1)  # Gradual decay
+                last_update_time = current_time
 
             # Update queue
             if not video_queue.full():

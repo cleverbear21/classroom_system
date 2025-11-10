@@ -68,4 +68,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Classroom Interest Monitor")
     parser.add_argument("--camera", type=int, default=0, help="Camera index to use (default: 0)")
     args = parser.parse_args()
+    # Start Flask app in a separate thread
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False), daemon=True)
+    flask_thread.start()
     main(camera_index=args.camera)
