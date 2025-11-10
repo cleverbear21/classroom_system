@@ -2,6 +2,7 @@ import cv2
 import threading
 import time
 import sys
+import argparse
 try:
     from video_analysis import analyze_video
     from audio_analysis import analyze_audio
@@ -26,11 +27,11 @@ def dashboard():
     <meta http-equiv="refresh" content="1">  <!-- Auto-refresh -->
     """, score=current_score, zone=current_zone)
 
-def main():
+def main(camera_index=1):
     print("Starting Classroom Interest Monitor...")
     try:
         # Start threads
-        video_thread = threading.Thread(target=analyze_video, daemon=True)
+        video_thread = threading.Thread(target=analyze_video, args=(camera_index,), daemon=True)
         audio_thread = threading.Thread(target=analyze_audio, daemon=True)
         video_thread.start()
         audio_thread.start()
@@ -64,4 +65,7 @@ def main():
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Classroom Interest Monitor")
+    parser.add_argument("--camera", type=int, default=0, help="Camera index to use (default: 0)")
+    args = parser.parse_args()
+    main(camera_index=args.camera)

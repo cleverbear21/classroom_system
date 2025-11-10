@@ -3,9 +3,9 @@ from utils import video_queue
 import time
 import sys
 
-def analyze_video():
+def analyze_video(camera_index=1):
     try:
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(camera_index)
         if not cap.isOpened():
             print("Error: Cannot access camera")
             return
