@@ -35,10 +35,10 @@ def main(camera_index=1):
         audio_thread = threading.Thread(target=analyze_audio, daemon=True)
         video_thread.start()
         audio_thread.start()
-        print("Video and audio threads started. Close the video window to exit.")
+        print("Video and audio threads started. Press Ctrl+C to exit.")
 
-        # Main loop
-        while video_thread.is_alive() or audio_thread.is_alive():
+        # Main loop - keep running even if threads die
+        while True:
             video_data = None
             audio_data = None
             try:
@@ -56,19 +56,48 @@ def main(camera_index=1):
                 current_score = combined
                 current_zone = zone
                 print(f"Combined Score: {combined}, Zone: {zone}")
+            elif video_data:
+                # Only video data available
+                video_score, video_zone = video_data
+                log_interest(video_zone, video_score, time.strftime("%H:%M:%S"))
+                current_score = video_score
+                current_zone = video_zone
+                print(f"Video Score: {video_score}, Zone: {video_zone}")
+            elif audio_data:
+                # Only audio data available
+                audio_score, audio_zone = audio_data
+                log_interest(audio_zone, audio_score, time.strftime("%H:%M:%S"))
+                current_score = audio_score
+                current_zone = audio_zone
+                print(f"Audio Score: {audio_score}, Zone: {audio_zone}")
 
             time.sleep(1)
+    except KeyboardInterrupt:
+        print("Interrupted by user")
     except Exception as e:
         print(f"Error in main: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         print("Exiting Classroom Interest Monitor.")
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Classroom Interest Monitor")
-    parser.add_argument("--camera", type=int, default=0, help="Camera index to use (default: 0)")
+    parser.add_argument("--camera", type=int, help="Camera index to use")
     args = parser.parse_args()
+
+    # If no camera specified, ask user
+    camera_index = args.camera
+    if camera_index is None:
+        try:
+            camera_index = int(input("Enter camera index to use (0 for default camera, 1 for second camera, etc.): "))
+        except ValueError:
+            print("Invalid input, using default camera (0)")
+            camera_index = 0
+
     # Start Flask app in a separate thread
-    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False), daemon=True)
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False), daemon=True)
     flask_thread.start()
-    main(camera_index=args.camera)
+    print("Flask dashboard started at http://localhost:5000")
+    main(camera_index=camera_index)

@@ -23,7 +23,7 @@ def analyze_audio():
                 audio = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
                 rms = librosa.feature.rms(y=audio)[0].mean()
                 zcr = librosa.feature.zero_crossing_rate(y=audio)[0].mean()
-                score = min(100, (rms * 1000 + zcr * 100))
+                score = min(100, (rms * 2000 + zcr * 200))
                 zone = "room"
 
                 if not audio_queue.full():
@@ -42,4 +42,3 @@ def analyze_audio():
         print("Audio analysis stopped.")
     except Exception as e:
         print(f"Error in audio analysis: {e}")
-        sys.exit(1)
